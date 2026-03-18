@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Credit Risk Predictor</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            background: #22c55e;
+            border: none;
+            border-radius: 6px;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .high {
+            background: #7f1d1d;
+        }
+
+        .low {
+            background: #14532d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Credit Risk</h1>
+
+    <label>Number of Delays</label>
+    <input type="number" id="num_delays" value="0">
+
+    <label>Credit Utilization (0 - 1)</label>
+    <input type="number" step="0.01" id="avg_util" value="0.2">
+
+    <label>Repayment Ratio (0 - 1)</label>
+    <input type="number" step="0.01" id="avg_pay_ratio" value="0.5">
+
+    <label>Credit Stress (0 - 1)</label>
+    <input type="number" step="0.01" id="credit_stress" value="0.1">
+
+    <button onclick="predict()">Predict</button>
+
+    <div id="output" class="result" style="display:none;"></div>
+</div>
+
+<script>
+async function predict() {
+    const data = {
+        num_delays: parseInt(document.getElementById("num_delays").value),
+        avg_util: parseFloat(document.getElementById("avg_util").value),
+        avg_pay_ratio: parseFloat(document.getElementById("avg_pay_ratio").value),
+        credit_stress: parseFloat(document.getElementById("credit_stress").value)
+    };
+
+    try {
+        const res = await fetch("http://127.0.0.1:5001/predict", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        const output = document.getElementById("output");
+        output.style.display = "block";
+
+        output.className = "result " + 
+            (result.prediction === "High Risk" ? "high" : "low");
+
+        output.innerHTML = `
+            <h2>${result.prediction}</h2>
+            <p><strong>Risk:</strong> ${result.metrics.default_probability}%</p>
+            <p><strong>Confidence:</strong> ${result.metrics.confidence}%</p>
+            <h3>Explanation:</h3>
+            <ul>
+                ${result.explanation.map(e => `<li>${e}</li>`).join("")}
+            </ul>
+            <h3>Recommendations:</h3>
+            <ul>
+            ${result.recommendations.map(r => `<li>${r}</li>`).join("")}
+            </ul>
+        `;
+
+    } catch (error) {
+        alert("Error connecting to API");
+        console.error(error);
+    }
+}
+</script>
+
+</body>
+</html>
